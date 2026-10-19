@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AURA | Autonomous Escrow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #000000 70%);
+            color: #e2e8f0;
+        }
+
+        .font-royal {
+            font-family: 'Cinzel', serif;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .input-glow:focus {
+            outline: none;
+            border-color: #d4af37;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-slide-up {
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col items-center justify-center p-4 space-y-8 w-full">
+
+    <div class="glass-panel rounded-2xl w-full max-w-lg p-8 relative overflow-hidden shrink-0">
+        <div
+            class="absolute top-0 left-1/2 transform -translate-x-1/2 w-3/4 h-32 bg-indigo-600 opacity-20 blur-[60px] pointer-events-none">
+        </div>
+
+        <div class="text-center mb-10 relative z-10">
+            <h1
+                class="font-royal text-4xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-200 mb-2">
+                A U R A</h1>
+            <p class="text-xs tracking-widest text-indigo-300 uppercase opacity-80">Autonomous Escrow Protocol</p>
+        </div>
+
+        <div class="space-y-6 relative z-10">
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-gray-400 mb-2 font-semibold">Service
+                    Requisition</label>
+                <input type="text" id="request" placeholder="e.g., Delivery Robot Hardware Setup"
+                    class="w-full bg-slate-900/50 border border-slate-700 text-white rounded-lg p-4 text-sm transition-all duration-300 input-glow placeholder-slate-600">
+            </div>
+
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-gray-400 mb-2 font-semibold">Budget Commitment
+                    (MicroAlgos)</label>
+                <input type="number" id="budget" placeholder="4000"
+                    class="w-full bg-slate-900/50 border border-slate-700 text-white rounded-lg p-4 text-sm transition-all duration-300 input-glow placeholder-slate-600 font-mono">
+            </div>
+
+            <button onclick="buyService()" class="w-full relative group overflow-hidden rounded-lg p-[1px]">
+                <span
+                    class="absolute inset-0 bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-400 rounded-lg opacity-70 group-hover:opacity-100 transition-opacity duration-300"></span>
+                <div
+                    class="relative bg-black px-8 py-4 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 group-hover:bg-opacity-0">
+                    <svg class="w-5 h-5 text-amber-300 group-hover:text-black transition-colors" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    <span
+                        class="font-royal font-bold tracking-wider text-amber-300 group-hover:text-black transition-colors">INITIATE
+                        PACT</span>
+                </div>
+            </button>
+        </div>
+
+        <div id="status" class="hidden mt-8 animate-slide-up"></div>
+    </div>
+
+    <div id="ledger-terminal"
+        class="hidden w-full max-w-3xl glass-panel border border-purple-900/50 rounded-lg shadow-[0_0_15px_rgba(147,51,234,0.2)] p-4 font-mono text-sm shrink-0">
+        <div class="flex items-center justify-between border-b border-purple-900/50 pb-2 mb-3">
+            <span class="text-purple-500 font-bold tracking-widest text-xs">◆ AURA SECURE LEDGER ACTIVITY</span>
+            <span class="text-green-500 text-xs animate-pulse">● LIVE CONNECTION</span>
+        </div>
+
+        <div class="flex text-gray-500 text-xs mb-2 px-2">
+            <span class="w-1/4">TIMESTAMP</span>
+            <span class="w-2/4">SMART CONTRACT PURPOSE</span>
+            <span class="w-1/4 text-right">TX_HASH</span>
+        </div>
+
+        <div id="ledger-entries" class="h-32 overflow-y-auto space-y-1">
+            <div class="text-gray-600 text-center italic mt-10">Awaiting network blocks...</div>
+        </div>
+    </div>
+
+    <script>
+        let currentCounterOffer = 0;
+
+        // --- FETCH LEDGER LOGIC ---
+        async function updateLedgerTerminal() {
+            try {
+                const response = await fetch('/api/ledger');
+                const ledgerData = await response.json();
+
+                if (ledgerData.length > 0) {
+                    document.getElementById('ledger-terminal').classList.remove('hidden');
+                    const entriesContainer = document.getElementById('ledger-entries');
+
+                    entriesContainer.innerHTML = ledgerData.map(entry => `
+                        <div class="flex items-center px-2 py-1.5 hover:bg-purple-900/20 rounded transition-colors border-l-2 border-transparent hover:border-purple-500">
+                            <span class="w-1/4 text-gray-400">[${entry.time}]</span>
+                            <span class="w-2/4 text-indigo-300 truncate pr-4">${entry.service}</span>
+                            <a href="#" class="w-1/4 text-right text-emerald-400 hover:text-emerald-300 truncate">
+                                ${entry.tx_id.substring(0, 16)}...
+                            </a>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error("Ledger sync failed:", error);
+            }
+        }
+
+        // Run on page load to fetch any existing history
+        updateLedgerTerminal();
+
+        // --- BUY SERVICE LOGIC ---
+        async function buyService(isAcceptingCounter = false) {
+            const requestText = document.getElementById('request').value;
+            const budget = isAcceptingCounter ? currentCounterOffer : document.getElementById('budget').value;
+            const statusDiv = document.getElementById('status');
+
+            statusDiv.className = "mt-8 p-6 rounded-xl border border-indigo-500/30 bg-indigo-900/20 shadow-[0_0_20px_rgba(79,70,229,0.15)] animate-slide-up backdrop-blur-md";
+            statusDiv.innerHTML = `
+                <div class="flex items-center justify-center gap-3">
+                    <svg class="animate-spin h-5 w-5 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="text-indigo-300 font-medium tracking-wide text-sm">${isAcceptingCounter ? 'Forging Smart Contract...' : 'Consulting The Oracle...'}</span>
+                </div>
+            `;
+            statusDiv.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/find-service', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ request: requestText, budget: budget })
+                });
+
+                const data = await response.json();
+                if (data.status === "success") {
+                    statusDiv.className = "mt-8 p-6 rounded-xl border border-emerald-500/40 bg-emerald-950/40 shadow-[0_0_30px_rgba(16,185,129,0.2)] animate-slide-up backdrop-blur-md";
+                    statusDiv.innerHTML = `
+                        <div class="flex items-center gap-3 mb-4 border-b border-emerald-500/20 pb-3">
+                            <div class="bg-emerald-500/20 p-2 rounded-full"><svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+                            <h3 class="font-royal text-xl text-emerald-300 tracking-wide">Pact Sealed</h3>
+                        </div>
+                        <div class="space-y-2 text-sm">
+                            <p class="text-gray-300 flex justify-between"><span class="text-gray-500">Service:</span> <span class="font-medium text-emerald-100">${data.service}</span></p>
+                            <p class="text-gray-300 flex justify-between"><span class="text-gray-500">Total Escrow Value:</span> <span class="font-mono text-amber-300 font-bold">${budget} µALGO</span></p>
+                            
+                            <div class="border-t border-emerald-500/20 my-2 pt-2 space-y-1">
+                                <p class="text-gray-400 flex justify-between text-xs"><span class="text-gray-500">Seller Payout (98%):</span> <span class="font-mono text-emerald-200">${data.seller_amount.toLocaleString()} µALGO</span></p>
+                                <p class="text-gray-400 flex justify-between text-xs"><span class="text-gray-500">AURA Network Fee (2%):</span> <span class="font-mono text-purple-400 font-bold">+${data.platform_fee.toLocaleString()} µALGO</span></p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 p-3 bg-black/50 rounded-lg border border-slate-800 font-mono text-[10px] text-gray-400 leading-relaxed overflow-x-auto">
+                            <p><span class="text-indigo-400">Buyer:</span> ${data.buyer}</p>
+                            <p><span class="text-emerald-400">Seller:</span> ${data.seller}</p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-emerald-500/20 text-center">
+                            <p class="text-[10px] text-emerald-500/70 tracking-widest uppercase font-semibold">Algorand TxID</p>
+                            <p class="text-[10px] text-gray-500 font-mono truncate mt-1">${data.tx_id}</p>
+                        </div>
+                    `;
+
+                    updateLedgerTerminal();
+                }
+                else if (data.status === "counter_offer") {
+                    currentCounterOffer = data.counter_price;
+                    statusDiv.className = "mt-8 p-6 rounded-xl border border-amber-500/40 bg-purple-950/40 shadow-[0_0_30px_rgba(212,175,55,0.15)] animate-slide-up backdrop-blur-md";
+                    statusDiv.innerHTML = `
+                        <div class="flex items-center gap-3 mb-4 border-b border-amber-500/20 pb-3">
+                            <div class="bg-amber-500/20 p-2 rounded-full"><svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></div>
+                            <h3 class="font-royal text-xl text-amber-300 tracking-wide">Oracle Counter-Offer</h3>
+                        </div>
+                        <p class="text-sm text-gray-300 leading-relaxed mb-6 font-light">${data.message}</p>
+                        <button onclick="buyService(true)" class="w-full bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 text-black font-semibold py-3 px-4 rounded-lg text-sm transition-all duration-300 shadow-[0_0_15px_rgba(251,191,36,0.4)]">
+                            Accept & Sign Blockchain Escrow
+                        </button>
+                    `;
+                }
+                else {
+                    statusDiv.className = "mt-8 p-4 rounded-xl border border-red-500/40 bg-red-950/40 text-red-300 text-sm animate-slide-up backdrop-blur-md";
+                    statusDiv.innerText = `Protocol Failed: ${data.message}`;
+                }
+            } catch (error) {
+                statusDiv.className = "mt-8 p-4 rounded-xl border border-red-500/40 bg-red-950/40 text-red-300 text-sm animate-slide-up backdrop-blur-md";
+                statusDiv.innerText = "Network interference detected. Please try again.";
+            }
+        }
+    </script>
+</body>
+
+</html>
