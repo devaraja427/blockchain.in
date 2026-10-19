@@ -16,12 +16,6 @@
   <img src="https://img.shields.io/badge/Project-Agentic%20Commerce-blue?style=for-the-badge" alt="Agentic Commerce" />
 </p>
 
-<p align="center">
-  <a href="https://github.com/Parthiv307/aura-escrow-protocal">GitHub Repository</a>
-</p>
-
----
-
 ## 📌 Overview
 
 **Aura Escrow Protocol** is an Agentic Service Buyer concept that combines AI agents, service discovery, price negotiation, and blockchain-based escrow to make digital service procurement more autonomous and secure.
@@ -352,7 +346,7 @@ Add the license that applies to the repository.
 
 **Aura Escrow Protocol — Agentic Service Buyer**
 
-Repository: [Parthiv307/aura-escrow-protocal](https://github.com/Parthiv307/aura-escrow-protocal)
+anthor : devaraja
 
 ---
 
